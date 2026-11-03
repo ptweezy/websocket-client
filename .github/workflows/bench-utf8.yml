@@ -1,0 +1,32 @@
+name: UTF-8 validation benchmark
+
+on:
+  push:
+    branches: [bench-utf8]
+  workflow_dispatch:
+
+jobs:
+  bench:
+    name: ${{ matrix.os }} py${{ matrix.python }} ${{ matrix.wsaccel && 'wsaccel' || 'pure' }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+        wsaccel: [false, true]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install wsaccel
+        if: matrix.wsaccel
+        run: pip install wsaccel
+      - name: Benchmark
+        run: python bench/bench_utf8.py --old bench/old_utils.py --out result.json ${{ matrix.wsaccel && '--wsaccel' || '' }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bench-${{ matrix.os }}-py${{ matrix.python }}-${{ matrix.wsaccel && 'wsaccel' || 'pure' }}
+          path: result.json
